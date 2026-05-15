@@ -1,0 +1,14 @@
+[package]
+name = "simplefs"
+version = "0.1.0"
+edition = "2021"
+description = "A FUSE-based simple file system with bitmap free space management, hierarchical directories, and Unix permissions"
+
+[dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+fuser = { version = "0.15" }
+
+[profile.release]
+opt-level = 3
