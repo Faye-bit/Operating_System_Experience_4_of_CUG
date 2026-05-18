@@ -66,13 +66,12 @@ impl SimpleFS {
 #[cfg(target_os = "linux")]
 mod fuse_impl {
     // 从父模块导入 SimpleFS 和公共项
-    use super::{SimpleFS, MAX_FILE_BLOCKS, system_time_from_timestamp, format_new_fs};
+    use super::{SimpleFS, MAX_FILE_BLOCKS, system_time_from_timestamp};
     // 从子模块导入核心类型
     use crate::bitmap::Bitmap;
     use crate::directory::{dir_add_entry, dir_find, dir_lookup, dir_remove_entry, DirEntry};
-    use crate::disk::{Disk, BLOCK_SIZE, PAGE_SIZE};
+    use crate::disk::{BLOCK_SIZE, PAGE_SIZE};
     use crate::inode::{current_timestamp, read_inode, write_inode, Inode, DIRECT_BLOCKS};
-    use crate::superblock::{read_superblock, write_superblock, SuperBlock};
     // FUSE 框架类型（仅 Linux 可用）
     use fuser::{
         FileAttr, FileType, Filesystem, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory,
@@ -113,7 +112,7 @@ mod fuse_impl {
 
     impl Filesystem for SimpleFS {
         /// 获取文件/目录属性（stat系统调用的后端）
-        fn getattr(&mut self, _req: &Request, ino: u64, reply: ReplyAttr) {
+        fn getattr(&mut self, _req: &Request, ino: u64, _fh: Option<u64>, reply: ReplyAttr) {
             let inode = read_inode(&self.disk, &self.sb, ino as u32);
             let attr = self.inode_to_attr(&inode);
             reply.attr(&Duration::from_secs(1), &attr);
@@ -246,7 +245,7 @@ mod fuse_impl {
             _req: &Request,
             parent: u64,
             name: &OsStr,
-            _mode: u16,
+            _mode: u32,
             _umask: u32,
             _flags: i32,
             reply: ReplyCreate,
@@ -304,7 +303,7 @@ mod fuse_impl {
             _req: &Request,
             parent: u64,
             name: &OsStr,
-            _mode: u16,
+            _mode: u32,
             _umask: u32,
             reply: ReplyEntry,
         ) {
@@ -553,13 +552,13 @@ mod fuse_impl {
             _uid: Option<u32>,
             _gid: Option<u32>,
             _size: Option<u64>,
-            _atime: Option<Duration>,
-            _mtime: Option<Duration>,
-            _ctime: Option<Duration>,
+            _atime: Option<fuser::TimeOrNow>,
+            _mtime: Option<fuser::TimeOrNow>,
+            _ctime: Option<std::time::SystemTime>,
             _fh: Option<u64>,
-            _crtime: Option<Duration>,
-            _chgtime: Option<Duration>,
-            _bkuptime: Option<Duration>,
+            _crtime: Option<std::time::SystemTime>,
+            _chgtime: Option<std::time::SystemTime>,
+            _bkuptime: Option<std::time::SystemTime>,
             _flags: Option<u32>,
             reply: ReplyAttr,
         ) {
