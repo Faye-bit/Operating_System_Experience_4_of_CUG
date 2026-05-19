@@ -129,6 +129,11 @@ mod fuse_impl {
         /// 获取文件/目录属性（stat系统调用的后端）
         fn getattr(&mut self, _req: &Request, ino: u64, _fh: Option<u64>, reply: ReplyAttr) {
             let inode = read_inode(&self.disk, &self.sb, ino as u32);
+            // nlink == 0 表示该 inode 未被分配，返回 ENOENT
+            if inode.nlink == 0 {
+                reply.error(ENOENT);
+                return;
+            }
             let attr = self.inode_to_attr(&inode);
             reply.attr(&Duration::from_secs(1), &attr);
         }
@@ -150,33 +155,28 @@ mod fuse_impl {
                 return;
             }
 
+            // 目录内容中已经包含 . 和 .. （由 format / mkdir 写入），
+            // 直接遍历输出即可，不再手动硬编码，避免 inode 号错误。
             let entries = dir_lookup(&self.disk, &dir_inode);
-
-            if offset == 0 {
-                reply.add(dir_inode.inode_no as u64, 1, FileType::Directory, OsStr::new("."));
-            }
-            if offset <= 1 {
-                reply.add(1, 2, FileType::Directory, OsStr::new(".."));
-            }
-
-            for (i, (entry, _, _)) in entries.iter().enumerate() {
-                let child_inode = read_inode(&self.disk, &self.sb, entry.inode);
-                let file_type = if entry.entry_type == 2 {
-                    FileType::Directory
-                } else {
-                    FileType::RegularFile
-                };
-                let entry_offset = 2 + i as i64;
+            let mut entry_offset: i64 = 0;
+            for (entry, _, _) in entries.iter() {
                 if entry_offset >= offset {
-                    if reply.add(
-                        child_inode.inode_no as u64,
+                    let file_type = if entry.entry_type == 2 {
+                        FileType::Directory
+                    } else {
+                        FileType::RegularFile
+                    };
+                    let full = reply.add(
+                        entry.inode as u64,
                         entry_offset + 1,
                         file_type,
                         OsStr::new(entry.name_str()),
-                    ) {
+                    );
+                    if full {
                         break;
                     }
                 }
+                entry_offset += 1;
             }
             reply.ok();
         }
