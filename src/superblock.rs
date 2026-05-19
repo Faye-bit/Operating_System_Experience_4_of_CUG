@@ -72,7 +72,7 @@ impl SuperBlock {
 
     /// 验证魔数
     pub fn is_valid(&self) -> bool {
-        &self.magic[..12] == b"SIMPLEFS-RUST"
+        &self.magic[..13] == b"SIMPLEFS-RUST"
     }
 
     /// 计算位图需要占用的块数
