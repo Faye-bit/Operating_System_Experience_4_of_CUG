@@ -106,8 +106,12 @@ fn main() {
 
     // 不传递任何特殊 MountOption，让 FUSE 使用默认行为
     let options: Vec<MountOption> = vec![];
+    println!("[SimpleFS] 文件系统已就绪，在另一个终端中操作 {} 即可测试", mount_point);
+    println!("[SimpleFS] 按 Ctrl+C 退出...");
     match fuser::mount2(filesystem, mount_point, &options) {
-        Ok(()) => {}
+        Ok(()) => {
+            // mount2 正常返回时才会执行到这里（通常不会，因为它是阻塞的）
+        }
         Err(e) => {
             eprintln!(
                 "[SimpleFS] 挂载失败: {}",
