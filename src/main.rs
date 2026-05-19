@@ -104,7 +104,7 @@ fn main() {
     println!("           - 层次化目录结构");
     println!("           - Unix权限系统");
 
-    let options = vec![MountOption::AllowOther, MountOption::AutoUnmount];
+    let options = vec![MountOption::AutoUnmount];
     fuser::mount2(filesystem, mount_point, &options)
         .expect("文件系统挂载失败！请确保已安装 libfuse 并且挂载点存在。");
 }
