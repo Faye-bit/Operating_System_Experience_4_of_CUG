@@ -613,9 +613,9 @@ fn format_new_fs(disk: &Disk) -> SuperBlock {
     // 2. 初始化位图（块#1~#5）
     Bitmap::init_bitmap(disk, &sb);
 
-    // 3. 创建根目录（inode #2）
+    // 3. 创建根目录（FUSE 规定根目录必须为 inode 1）
     let mut sb_mut = sb;
-    let root_inode_no = 2u32;
+    let root_inode_no = 1u32;
     let mut root_inode = Inode::new_dir(root_inode_no);
 
     // 为根目录分配数据块
