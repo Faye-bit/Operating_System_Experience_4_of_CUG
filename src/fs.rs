@@ -41,15 +41,30 @@ pub struct SimpleFS {
 
 impl SimpleFS {
     /// 创建或打开文件系统
+    ///
+    /// 如果磁盘映像不存在（大小为0），则创建新文件系统。
+    /// 如果磁盘映像已存在但超级块无效（例如上次运行崩溃），则自动重新格式化。
     pub fn mount(disk_path: &str) -> Self {
         let disk = Disk::open(disk_path);
         let size = disk.size();
 
         let sb = if size == 0 {
+            // 全新的磁盘映像，需要格式化
             disk.truncate(crate::disk::DISK_SIZE);
             format_new_fs(&disk)
         } else {
-            read_superblock(&disk)
+            // 尝试读取已有文件系统
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                read_superblock(&disk)
+            })) {
+                Ok(sb) => sb,
+                Err(_) => {
+                    // 超级块损坏（可能是上次运行崩溃导致的），重新格式化
+                    eprintln!("[SimpleFS] 检测到损坏的磁盘映像，正在重新格式化...");
+                    disk.truncate(crate::disk::DISK_SIZE);
+                    format_new_fs(&disk)
+                }
+            }
         };
 
         SimpleFS {

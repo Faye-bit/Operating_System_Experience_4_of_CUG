@@ -104,7 +104,21 @@ fn main() {
     println!("           - 层次化目录结构");
     println!("           - Unix权限系统");
 
-    let options = vec![MountOption::AutoUnmount];
-    fuser::mount2(filesystem, mount_point, &options)
-        .expect("文件系统挂载失败！请确保已安装 libfuse 并且挂载点存在。");
+    // 不传递任何特殊 MountOption，让 FUSE 使用默认行为
+    let options: Vec<MountOption> = vec![];
+    match fuser::mount2(filesystem, mount_point, &options) {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!(
+                "[SimpleFS] 挂载失败: {}",
+                e
+            );
+            eprintln!("[SimpleFS] 故障排查建议:");
+            eprintln!("  1. 删除旧的 disk.img: rm disk.img");
+            eprintln!("  2. 确保挂载点存在: mkdir -p {}", mount_point);
+            eprintln!("  3. 如果挂载点卡住: fusermount -u {} 2>/dev/null; umount {} 2>/dev/null", mount_point, mount_point);
+            eprintln!("  4. 确保 fuse 内核模块已加载: sudo modprobe fuse");
+            std::process::exit(1);
+        }
+    }
 }
